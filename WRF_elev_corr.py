@@ -1,10 +1,17 @@
-#   Script to create a raster for correcting model-generated observational precipitation
+'''
+Precipitation series from WRF sometimes need to be adjusted based on elevation. This script creates a 
+precipitation correction raster using a formula estimated by a participant on the SEHAG project.
+
+'''
+
 import numpy as np
 import os
 import re
 import rasterio
 path = os.getcwd() 
 import sys
+
+#optimization with dictionaries and functions needed
 
 #import elevation raster
 path_input = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup\\Input'
