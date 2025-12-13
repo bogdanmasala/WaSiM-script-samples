@@ -27,7 +27,8 @@ def generate_elevation_correction_raster(input_folder, subcatchment_identificati
     subcatchments_ds = rasterio.open(os.path.join(input_folder, subcatchment_identification_file))
     subcatchments = subcatchments_ds.read(1)
     #make copy for further calculations and set data values to 0
-    subcatchments[subcatchments > 0] = 0
+    subcatchments_zeroed = subcatchments.copy()
+    subcatchments_zeroed[subcatchments_zeroed > 0] = 0
     
     #subcatchments_calculation = subcatchments.copy()
     #subcatchments_calculation[subcatchments_calculation > 0] = 0
@@ -41,7 +42,7 @@ def generate_elevation_correction_raster(input_folder, subcatchment_identificati
     
     #create new elevations raster with data values limited to catchment area
     elevations_catchment = elevations.copy()
-    elevations_catchment = elevations_catchment + subcatchments
+    elevations_catchment = elevations_catchment + subcatchments_zeroed
     elevations_catchment[elevations_catchment < 0] = -9999
     
     #make a copy to calculate median elevation
