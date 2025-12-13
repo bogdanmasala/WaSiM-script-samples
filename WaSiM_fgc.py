@@ -1,90 +1,88 @@
 '''
-This script reads the ".glc" binary glacier cover files from your WaSiM model output, and computes
-the fraction of the catchment area covered in glaciers, or the fractional glacier-covered area ("fgc").
+This script reads the binary glacier cover files from an output folder of a WaSiM model run, and computes the fraction of 
+the catchment area covered in glaciers, or the fractional glacier-covered area ("fgc"). A table summarizing the computations
+is written into the output folder, and the binary glacier cover files can then be deleted to save space.
 '''
 
-import spotpy
+#import libraries
 import numpy as np
-import os
 import pandas as pd
-import subprocess
-from datetime import datetime
-path = os.getcwd() 
-import sys
-sys.path.insert(0, path)
-import shutil as sh
-import re
 import rasterio
+import os
+import re
 
-#dictionaries and functions needed
+#get and set path of working directory
+path = os.getcwd() 
+os.chdir(working directory)
 
-######################### set paths to needed folders #########################
-path_control = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup\\Control'
-path_obs = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup\\Observation'
-path_init = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup\\Init'
-path_langerner = os.path.join(path_init,'langenferner') 
-path_input = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup\\Input'
-wasim_mainpath = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup\\supplement runs'
-#change working directory to control folder
-os.chdir(path_control)
+#set directory paths and filenames
+WaSiM_control_folder = 'control_folder'
+WaSiM_observations_folder = 'observations_folder'
+WaSiM_initialization_folder = 'init_folder'
+WaSiM_input_folder = 'input_folder'
+WaSiM_main_directory = 'main_directory'
+output_folder = 'output'
 
-###############################################################################
-################## set up zeroed ezg raster for fgc #################
-#open ezg raster for use as base in fgc calcs
-fname_ezg = 'dem_25_2006_large.ezg'
-ezg_ds = rasterio.open(os.path.join(path_input,fname_ezg))
-ezg = ezg_ds.read(1)
-ezg_0 = ezg.copy()
-ezg_0[ezg_0 >= 0] = 0
-
-
-output_folder_fname = 'output_run_thesis_WRF_firn_mod'
-#use path.join function to make new output folder path
-output_folder = os.path.join(wasim_mainpath, output_folder_fname)
-#change default output directory in control file
-
-
-###########################################################################
-########################### fgc calculations ##############################
-#get list of glc rasters
-glc_sim_list = []
-for output_file in os.listdir(output_folder):
-    if output_file.endswith('2400') and output_file.startswith('glc_'):
-        glc_sim_list.append(os.path.join(output_folder, output_file))
-
-#initialize dataframe for date and fgc mean 
-fgc_values = pd.DataFrame({'date': [],'fgc_mean': []})
-
-#collect dates of simulated glc rasters
-date_pattern_glc = r'(\d{8})'
-date_search_glc = []
-for glc_file in glc_sim_list:
-    date_search_glc.append(re.search(date_pattern_glc,glc_file).group())
-fgc_values['date'] = pd.to_datetime(date_search_glc,format='%Y%m%d')
-
-#calculate fgc means and fill in fgc_values table
-for b in range(len(glc_sim_list)):
-    glc_raster_ds = rasterio.open(glc_sim_list[b])
-    glc_raster = glc_raster_ds.read(1)
-    glc_raster[glc_raster<0] = 0
+##############################################################################################################################################################################
+def fractional_glacier_covered_area(input_folder, subcatchment_identification_file, output_folder):
     
-    #add glc raster to base raster
-    gc_raster = glc_raster + ezg_0
-    gc_raster[gc_raster<0] = 'nan'
+    #set up zeroed subcatchments raster
+    subcatchments_ds = rasterio.open(os.path.join(input_folder, subcatchment_identification_file))
+    subcatchments = subcatchments_ds.read(1)
+    subcatchments_zeroed = subcatchments.copy()
+    subcatchments_zeroed[subcatchments_zeroed > 0] = 0
     
-    #take NaN mean of glacier cover raster
-    fgc_values.loc[b,'fgc_mean'] = round(np.nanmean(gc_raster),2)
-    glc_raster_ds.close()
+    #make list of filepaths of output glacier cover rasters
+    glacier_cover_list = []
+    for search_file in os.listdir(output_folder):
+        if search_file.endswith('file ending') and search_file.startswith('file start'):
+            glacier_cover_list.append(os.path.join(output_folder, search_file))
+            
+    #initialize dataframe with date of output and fraction of catchment area covered in glacier
+    fraction_glacier_cover = pd.DataFrame({'date': [], 'fraction_glacier_cover': []})
+    
+    #collect dates of output glacier cover rasters
+    date_pattern = r'(d{8})'
+    date_search = []
+    for date_file in glacier_cover_list:
+        date_search.append(re.search(date_pattern, date_file).group())
+    fraction_glacier_cover['date'] = pd.to_datetime(date_search, format='%Y%m%d')
 
-#write table of fgc values
-fgc_values_table_path = output_folder + '\\table_fgc.csv'
-fgc_values.to_csv(fgc_values_table_path, sep = ',', index = False)     
+    #compute fractional glacier-covered area and fill in table
+    for a in range(len(glacier_cover_list)):
+        glacier_cover_ds = rasterio.open(glacier_cover_list[a])
+        glacier_cover = glacier_cover_ds.read(1)
+        #set non-data values to 0
+        glacier_cover[glacier_cover < 0] = 0
+        
+        #add zeroed subcatchments raster
+        glacier_cover = glacier_cover + subcatchments_zeroed
+        glacier_cover[glacier_cover < 0] = 'nan'
+        
+        #compute NaN (not a number) mean of glacier cover raster
+        fraction_glacier_cover.loc[a, 'fraction_glacier_cover'] = round(np.nanmean(glacier_cover), 2)
+        
+        #close opened raster file
+        glacier_cover_ds.close()
+        
+    #write table of fractional glacier-covered area values
+    fraction_glacier_cover_table_path = output_folder + '\\table_glacier_fractions.csv'
+    fraction_glacier_cover.to_csv(fraction_glacier_cover_table_path, sep = ',', index = False)     
 
-#don't delete glc files! or maybe do? don't need spatial fit for first sample runs
-#delete fgc rasters after all
-for file_del in os.listdir(output_folder):
-    if file_del.startswith(('glc_')) and file_del.endswith('2400'):
-        os.unlink(os.path.join(output_folder,file_del))  
+    #can delete output glacier cover rasters
+    #delete fgc rasters after all
+    for delete_file in os.listdir(output_folder):
+        if delete_file.startswith(('file ending')) and file_del.endswith('file start'):
+            os.unlink(os.path.join(output_folder, delete_file))  
 
-ezg_ds.close()
+    #close open raster files
+    subcatchments_ds.close()    
+
+    #end function
+##############################################################################################################################################################################
+
+#run function
+fractional_glacier_covered_area(input_folder, subcatchment_identification_file, output_folder)
+
+
 
