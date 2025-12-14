@@ -1,8 +1,6 @@
 '''
-This script uses creates binary snow cover rasters, computes fractional snow-covered area 
-and snow cover duration by grid cell, using the daily snow depth rasters of your WaSiM model output. 
-Snow cover duration rasters are computed with cumulative values up to the number of days in the year, 
-as well as normalized between 0 and 1.
+This script creates binary snow cover rasters, using the snow depth rasters of the WaSiM model output. It then computes 
+fractional snow-covered area for the catchment, as well as standard deviation of binary snow cover values.
 '''
 
 #import libraries
