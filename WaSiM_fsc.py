@@ -86,6 +86,11 @@ def fractional_snow_covered_area(input_folder, glacier_base_raster, output_folde
         
     #close open raster file
     glacier_base_ds.close()
+    
+    #can delete output snow depth rasters
+    for delete_file in os.listdir(output_folder):
+        if delete_file.startswith(('file start')) and file_del.endswith('file ending'):
+            os.unlink(os.path.join(output_folder, delete_file))  
 
     #end function
 ##############################################################################################################################################################################

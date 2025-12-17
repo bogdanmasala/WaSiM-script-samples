@@ -71,14 +71,13 @@ def fractional_glacier_covered_area(input_folder, subcatchment_identification_fi
     fraction_glacier_cover_table_path = output_folder + '\\table_glacier_fractions.csv'
     fraction_glacier_cover.to_csv(fraction_glacier_cover_table_path, sep = ',', index = False)     
 
+    #close open raster files
+    subcatchments_ds.close()   
+
     #can delete output glacier cover rasters
-    #delete fgc rasters after all
     for delete_file in os.listdir(output_folder):
         if delete_file.startswith(('file start')) and file_del.endswith('file ending'):
             os.unlink(os.path.join(output_folder, delete_file))  
-
-    #close open raster files
-    subcatchments_ds.close()    
 
     #end function
 ##############################################################################################################################################################################
